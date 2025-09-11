@@ -24,10 +24,18 @@ This scaffold provides a standardized project structure for managing AWS infrast
 │   ├── common.hcl            # Common variables and provider config
 │   └── variables.tf          # Shared variable definitions
 ├── stacks/
-│   └── compute/
-│       └── EC2/
-│           └── ALB_Main/     # Example stack
+│   ├── foundation/           # Core infrastructure layer
+│   │   ├── network/vpc/      # VPC, subnets, routing
+│   │   └── iam/roles/        # Service roles and policies
+│   ├── platform/             # Shared services layer
+│   │   └── containers/
+│   │       └── eks-control-plane/  # EKS cluster
+│   ├── application/          # Application-specific layer
+│   │   └── compute/alb/      # Application load balancer
+│   └── observability/        # Monitoring and logging layer
 └── docs/                     # Documentation and diagrams
+    └── catalog/docs/
+        └── guidelines/       # Architecture and best practices
 ```
 
 ## Quick Start
