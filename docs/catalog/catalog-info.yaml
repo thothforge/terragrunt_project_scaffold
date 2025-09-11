@@ -1,0 +1,26 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: terragrunt_project_scaffold
+  description: Production-ready Terragrunt template for AWS infrastructure deployment and best practices.
+  links:
+    - url: https://github.com/thothforge/terragrunt_project_scaffold.git
+      title: Source Code
+      icon: Source
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - aws
+    - terraform
+    - iac
+    - terragrunt
+    - scaffold
+    - devsecops
+    - gitops
+    - template
+    - infrastructure
+spec:
+  type: template
+  lifecycle: production
+  owner: IaCPlatform
+  system: IaCPlatform
