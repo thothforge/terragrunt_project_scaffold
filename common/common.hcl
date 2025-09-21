@@ -3,20 +3,20 @@
 locals {
   # Default values for variables
   profile           = "#{deployment_profile}#"
-  project           = "test-wrapper"
+  project           = "#{project_name}#"
   deployment_region = "#{deployment_region}#"
   provider          = "#{cloud_provider}#"
-  client = "thothctl"
+  client = "#{client}#"
 
   # Set tags according to company policies
   tags = {
-    ProjectCode = "test-wrapper"
+    ProjectCode = "XXXX"
     Framework   = "DevSecOps-IaC"
   }
 
   # Backend Configuration
   backend_region        = "#{deployment_region}#"
-  backend_bucket_name   = "test-wrapper-tfstate"
+  backend_bucket_name   = "#{backend_bucket}#"
   backend_profile       = "#{deployment_profile}#"
   backend_dynamodb_lock = "#{backend_dynamodb}#"
   backend_key           = "terraform.tfstate"
