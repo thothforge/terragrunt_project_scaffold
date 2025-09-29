@@ -1,5 +1,4 @@
 # Load variables in locals
-# Load variables in locals
 locals {
   # Default values for variables
   profile           = "#{deployment_profile}#"

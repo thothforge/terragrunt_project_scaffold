@@ -153,6 +153,7 @@ When creating new stacks, the agent must:
 2. **Verify Module Compatibility**: Check Terraform and provider version requirements
 3. **Review Module Documentation**: Understand inputs, outputs, and examples
 4. **Select Appropriate Submodule**: Use specific submodules when available
+5. **Use latest Version for new stack components**: Use the latest or more recent version published for each module
 
 ### Dependency Management Rules
 1. **Use `dependency` blocks**: Never use `dependencies` for cross-stack references
