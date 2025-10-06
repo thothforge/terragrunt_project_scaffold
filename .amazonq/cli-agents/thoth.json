@@ -2,14 +2,27 @@
   "name": "thoth",
   "description": "IaC and GitOps specialist THOTH agent for IaC deployments",
   "mcpServers": {
-     "thothctl": {
+    "thothctl": {
       "command": "thothctl",
-      "args": ["mcp", "server", "--stdio"]
+      "args": [
+        "mcp",
+        "server",
+        "--stdio"
+      ]
     },
-
+    "aws-knowledge-mcp-server": {
+      "command": "uvx",
+      "args": [
+        "fastmcp",
+        "run",
+        "https://knowledge-mcp.global.api.aws"
+      ]
+    },
     "git": {
-       "command": "uvx",
-      "args": ["mcp-server-git"],
+      "command": "uvx",
+      "args": [
+        "mcp-server-git"
+      ],
       "timeout": 30000
     },
     "terraform": {
@@ -55,7 +68,6 @@
     "@git/git_diff": "diff"
   },
   "toolsSettings": {
-
     "fs_write": {
       "allowedPaths": [
         "stacks/**",
@@ -71,7 +83,6 @@
         "docs/**"
       ]
     }
-
   },
   "resources": [
     "file://README.md",
@@ -87,5 +98,4 @@
     "file://stacks/**/*.tf",
     "file://docs/**/*.md"
   ]
-
 }
