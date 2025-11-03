@@ -1,5 +1,6 @@
 
-project = "test-wrapper"
-environment = "dev"
-owner = "thothctl"
+project = "#{project_name}#"
+environment = "#{environment}#"
+owner = "#{owner}#"
 region = "#{deployment_region}#"
+
