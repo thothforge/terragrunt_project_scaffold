@@ -47,3 +47,6 @@ remote_state {
     profile              = local.common_vars.locals.backend_profile
   }
 }
+
+
+generate = local.common_vars.generate
