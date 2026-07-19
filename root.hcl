@@ -26,6 +26,14 @@ terraform {
       "-var-file=${get_parent_terragrunt_dir()}/common/common.tfvars"
 
     ]
+
+    optional_var_files = [
+      "${get_parent_terragrunt_dir()}/overwrite.auto.tfvars",
+      "${get_parent_terragrunt_dir()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/applications.tfvars",
+      "${get_parent_terragrunt_dir()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/foundations.tfvars",
+      "${get_parent_terragrunt_dir()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/observability.tfvars",
+      "${get_parent_terragrunt_dir()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/platform.tfvars",
+    ]
   }
 
 

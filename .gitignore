@@ -180,3 +180,9 @@ terraform.rc
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/terraform,terragrunt,pycharm,visualstudiocode
+
+# Amazon Q
+.amazonq/
+
+# JetBrains terminal history (Windows path artifacts)
+C:\\Users\\*

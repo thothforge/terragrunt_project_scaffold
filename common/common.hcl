@@ -5,11 +5,12 @@ locals {
   project           = "#{project_name}#"
   deployment_region = "#{deployment_region}#"
   provider          = "#{cloud_provider}#"
-  client = "#{client}#"
+  client            = "#{client}#"
+  environment       = get_env("TF_VAR_ENVIRONMENT", "dev")
 
   # Set tags according to company policies
   tags = {
-    ProjectCode = "XXXX"
+    ProjectCode = "#{project_name}#"
     Framework   = "DevSecOps-IaC"
   }
 
@@ -19,7 +20,7 @@ locals {
   backend_profile       = "#{deployment_profile}#"
   backend_dynamodb_lock = "#{backend_dynamodb}#"
   backend_key           = "terraform.tfstate"
-  backend_encrypt = true
+  backend_encrypt       = true
   # format cloud provider/client/projectname
   project_folder        = "${local.provider}/${local.client}/${local.project}"
 
@@ -32,7 +33,7 @@ generate "provider" {
 variable "required_tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
-  #{deployment_profile}#     = {}
+  default     = {}
 }
 variable "project" {
   type        = string
@@ -40,34 +41,29 @@ variable "project" {
 }
 variable "profile" {
   description = "Variable for credentials management."
-  #{deployment_profile}# = {
-    #{deployment_profile}# = {
+  default = {
+    default = {
       profile = "#{deployment_profile}#"
       region = "#{deployment_region}#"
-}
+    }
     dev  = {
       profile = "#{deployment_profile}#"
       region = "#{deployment_region}#"
-}
+    }
     prod = {
       profile = "#{deployment_profile}#"
       region = "#{deployment_region}#"
-    
-}
+    }
   }
-
 }
-
 
 provider "#{cloud_provider}#" {
   region  = var.profile[terraform.workspace]["region"]
   profile = var.profile[terraform.workspace]["profile"]
 
-  #{deployment_profile}#_tags {
+  default_tags {
     tags = var.required_tags
-
+  }
 }
-}
-
 EOF
 }

@@ -4,11 +4,11 @@ include "root" {
 
 locals {
   common_vars = read_terragrunt_config(find_in_parent_folders("common/common.hcl"))
-  environment = get_env("TF_WORKSPACE", "dev")
+  environment = get_env("TF_VAR_ENVIRONMENT", "dev")
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/vpc/aws?version=5.0.0"
+  source = "tfr:///terraform-aws-modules/vpc/aws?version=5.16.0"
 }
 
 inputs = {

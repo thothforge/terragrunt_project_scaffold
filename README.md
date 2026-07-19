@@ -1,250 +1,383 @@
 # Terragrunt Project Scaffold
 
-A production-ready Terragrunt template for AWS infrastructure deployment with GitOps integration and best practices.
+**Stack-based AWS infrastructure composition with Terragrunt 1.1** — a production-ready template for managing multi-layer cloud infrastructure using Terragrunt's native stack orchestration, `autoinclude` dependency injection, and Content-Addressable Storage (CAS).
 
 ## Overview
 
-This scaffold provides a standardized project structure for managing AWS infrastructure using Terragrunt, with built-in support for:
-- Multi-environment deployments
-- Remote state management with S3 and DynamoDB
-- Code quality tools (TFLint, pre-commit hooks)
-- GitOps workflows
-- Modular architecture
+This scaffold leverages Terragrunt 1.1's `terragrunt.stack.hcl` files to declaratively compose infrastructure layers as directed acyclic graphs (DAGs). Each stack defines its units and their inter-dependencies, eliminating manual `dependency` blocks and enabling automated cross-stack wiring.
+
+Key design principles:
+
+- **Layered architecture** — Foundation → Platform → Application → Observability
+- **Stack-based composition** — Each layer is a self-contained `terragrunt.stack.hcl` with explicit unit definitions
+- **Autoinclude dependencies** — Cross-unit and cross-stack references are resolved automatically
+- **Environment-driven configuration** — `TF_VAR_ENVIRONMENT` selects per-environment `.tfvars` overlays
+- **Template-ready** — ThothCTL parameterization for scaffolding new projects from this template
 
 ## Project Structure
 
 ```
 #{project_name}#/
-├── .thothcf.toml              # Template configuration
-├── .gitignore                 # Git ignore rules
-├── .tflint.hcl               # TFLint configuration
-├── .pre-commit-config.yaml   # Pre-commit hooks
-├── root.hcl                  # Root Terragrunt configuration
+├── root.hcl                          # Root Terragrunt config (remote state, providers)
 ├── common/
-│   ├── common.hcl            # Common variables and provider config
-│   └── variables.tf          # Shared variable definitions
+│   ├── common.hcl                    # Shared locals, tags, provider config
+│   ├── common.tfvars                 # Common variable values
+│   └── variables.tf                  # Shared variable definitions
+├── environments/                     # Per-environment variable overlays
+│   ├── dev/
+│   │   ├── foundations.tfvars
+│   │   ├── platform.tfvars
+│   │   ├── applications.tfvars
+│   │   └── observability.tfvars
+│   ├── qa/
+│   │   └── ...
+│   └── prd/
+│       └── ...
 ├── stacks/
-│   ├── foundation/           # Core infrastructure layer
-│   │   ├── network/vpc/      # VPC, subnets, routing
-│   │   └── iam/roles/        # Service roles and policies
-│   ├── platform/             # Shared services layer
-│   │   └── containers/
-│   │       └── eks-control-plane/  # EKS cluster
-│   ├── application/          # Application-specific layer
-│   │   └── compute/alb/      # Application load balancer
-│   └── observability/        # Monitoring and logging layer
-└── docs/                     # Documentation and diagrams
-    └── catalog/docs/
-        └── guidelines/       # Architecture and best practices
+│   ├── foundation/                   # Core infrastructure layer
+│   │   ├── terragrunt.stack.hcl      # Stack composition (VPC, IAM, SGs)
+│   │   ├── network/
+│   │   │   ├── vpc/terragrunt.hcl
+│   │   │   └── security-groups/terragrunt.hcl
+│   │   └── iam/
+│   │       ├── roles/terragrunt.hcl
+│   │       └── policies/
+│   ├── platform/                     # Shared services layer
+│   │   ├── terragrunt.stack.hcl      # Stack composition (EKS, ECR, RDS, ElastiCache)
+│   │   ├── containers/
+│   │   │   ├── eks/terragrunt.hcl
+│   │   │   └── ecr/terragrunt.hcl
+│   │   └── data/
+│   │       ├── rds/terragrunt.hcl
+│   │       └── elasticache/terragrunt.hcl
+│   ├── application/                  # Application-specific layer
+│   │   ├── terragrunt.stack.hcl      # Stack composition (ALB, ASG, S3, EFS)
+│   │   ├── compute/
+│   │   │   ├── alb/terragrunt.hcl
+│   │   │   └── asg/terragrunt.hcl
+│   │   └── storage/
+│   │       ├── s3/terragrunt.hcl
+│   │       └── efs/terragrunt.hcl
+│   └── observability/                # Monitoring and logging layer
+│       ├── terragrunt.stack.hcl      # Stack composition (CloudWatch, Prometheus)
+│       └── monitoring/
+│           ├── cloudwatch/terragrunt.hcl
+│           └── prometheus/terragrunt.hcl
+├── docs/                             # Documentation and Backstage catalog
+├── .thothcf.toml                     # ThothCTL template parameters
+├── .pre-commit-config.yaml           # Pre-commit hooks
+├── .tflint.hcl                       # TFLint configuration
+├── .gitignore                        # Git ignore rules
+└── LICENSE                           # Apache 2.0
 ```
 
 ## Quick Start
 
 ### Prerequisites
 
-- [Terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= 0.45.0
-- [Terraform](https://www.terraform.io/downloads) >= 1.0
-- [AWS CLI](https://#{cloud_provider}#.amazon.com/cli/) configured
-- [TFLint](https://github.com/terraform-linters/tflint) (optional)
-- [Pre-commit](https://pre-commit.com/) (optional)
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Terragrunt](https://terragrunt.gruntwork.io/) | **≥ 1.1.0** | Stack orchestration and HCL composition |
+| [OpenTofu](https://opentofu.org/) or [Terraform](https://www.terraform.io/) | ≥ 1.6 | Infrastructure provisioning |
+| [AWS CLI](https://aws.amazon.com/cli/) | ≥ 2.x | AWS authentication and configuration |
+| [ThothCTL](https://pypi.org/project/thothctl/) | ≥ 0.22 | Template scaffolding and IaC governance |
+| [TFLint](https://github.com/terraform-linters/tflint) | latest | Linting (optional) |
+| [Pre-commit](https://pre-commit.com/) | latest | Git hooks (optional) |
 
-### Configuration
+### 1. Scaffold from Template
 
-1. **Update Template Parameters** in `.thothcf.toml`:
-```toml
-[project_properties]
-project = "your-project-name"
-environment = "dev"
-backend_bucket = "your-project-tfstate"
-region = "#{deployment_region}#"
+```bash
+# Using ThothCTL
+thothctl init project --name my-infra --template terragrunt-aws
+
+# Or clone directly
+git clone <repo-url> my-infra && cd my-infra
 ```
 
-2. **Configure Common Variables** in `common/common.hcl`:
+### 2. Configure Parameters
+
+Edit `.thothcf.toml` or run ThothCTL's interactive setup to fill in template values (project name, region, backend bucket, etc.).
+
+### 3. Set Environment
+
+```bash
+export TF_VAR_ENVIRONMENT=dev   # dev | qa | prd
+```
+
+### 4. Deploy a Stack
+
+```bash
+cd stacks/foundation
+
+# Plan all units in the foundation stack
+terragrunt run-all plan
+
+# Apply the foundation layer
+terragrunt run-all apply
+```
+
+### 5. Deploy All Stacks (respects dependency order)
+
+```bash
+cd stacks
+terragrunt run-all apply
+```
+
+## Stack Composition (Terragrunt 1.1)
+
+### `terragrunt.stack.hcl`
+
+Each layer defines a **stack file** that declares its units and their dependency graph. Terragrunt 1.1 reads these files to orchestrate plan/apply order automatically.
+
 ```hcl
-locals {
-  project           = "your-project"
-  deployment_region = "#{deployment_region}#"
-  backend_bucket_name = "your-project-tfstate"
+# stacks/foundation/terragrunt.stack.hcl
+
+unit "vpc" {
+  source = "tfr:///terraform-aws-modules/vpc/aws?version=5.16.0"
+  path   = "network/vpc"
+}
+
+unit "security_groups" {
+  source = "tfr:///terraform-aws-modules/security-group/aws?version=5.2.0"
+  path   = "network/security-groups"
+
+  autoinclude {
+    dependency "vpc" {
+      config_path = unit.vpc.path
+    }
+    inputs = {
+      vpc_id = dependency.vpc.outputs.vpc_id
+    }
+  }
 }
 ```
 
-### Deployment
+### `autoinclude` — Dependency Injection
 
-```bash
-# Initialize and plan
-cd stacks/compute/EC2/ALB_Main
-terragrunt plan
+The `autoinclude` block within a unit:
 
-# Apply changes
-terragrunt apply
+1. **Declares dependencies** via `dependency` sub-blocks with `config_path` pointing to the upstream unit
+2. **Injects inputs** automatically from dependency outputs into the unit's `inputs`
+3. **Eliminates boilerplate** — no need for manual `dependency` blocks or `mock_outputs` in each unit's `terragrunt.hcl`
 
-# Destroy (when needed)
-terragrunt destroy
+Cross-stack references use relative paths:
+
+```hcl
+# In platform stack, referencing foundation stack
+autoinclude {
+  dependency "vpc" {
+    config_path = "../../foundation/network/vpc"
+  }
+  inputs = {
+    vpc_id     = dependency.vpc.outputs.vpc_id
+    subnet_ids = dependency.vpc.outputs.private_subnets
+  }
+}
 ```
 
-## Configuration Files
+### Content-Addressable Storage (CAS)
 
-### `.thothcf.toml`
-Template configuration with validation rules for:
-- Project naming conventions
-- AWS region validation
-- S3 bucket naming compliance
-- Environment restrictions (dev|qa|stg|test|prod)
+Terragrunt 1.1 caches module sources using content-addressable storage, reducing redundant downloads and accelerating `init` across units that share the same module version.
 
-### `root.hcl`
-Root Terragrunt configuration providing:
-- Remote state configuration
-- Common variable injection
-- Terraform initialization arguments
+### Unit `terragrunt.hcl` Files
 
-### `common/common.hcl`
-Shared configuration including:
-- AWS provider setup with workspace-based profiles
-- Default tags for resource management
-- Backend configuration for state management
+Each unit directory contains a minimal `terragrunt.hcl` that includes the root configuration. Source and dependency inputs are injected by the stack file's `autoinclude`:
 
-## Features
+```hcl
+include "root" {
+  path = find_in_parent_folders("root.hcl")
+}
 
-### Remote State Management
-- **S3 Backend**: Centralized state storage
-- **DynamoDB Locking**: Prevents concurrent modifications
-- **Encryption**: State files encrypted at rest
-- **Workspace Support**: Multi-environment state isolation
+locals {
+  common_vars = read_terragrunt_config(find_in_parent_folders("common/common.hcl"))
+  environment = get_env("TF_VAR_ENVIRONMENT", "dev")
+}
 
-### Code Quality
-- **TFLint**: AWS and Terraform rule validation
-- **Pre-commit Hooks**: Automated formatting and validation
-- **Git Hooks**: Terragrunt HCL formatting, Terraform validation
+# Module source and inputs are injected by terragrunt.stack.hcl autoinclude
+# Add stack-specific overrides here
+```
 
-### Multi-Environment Support
-Workspace-based configuration for:
-- `dev`: Development environment
-- `qa`: Quality assurance
-- `stg`: Staging environment
-- `prod`: Production environment
+Units with complex configuration (e.g., VPC CIDR ranges, EKS cluster settings) define their own `inputs` block which merges with the autoinclude-injected inputs.
+
+## Environment Management
+
+Environments are controlled via the `TF_VAR_ENVIRONMENT` variable and per-environment `.tfvars` overlays.
+
+### How It Works
+
+1. `root.hcl` injects environment-specific tfvars via `optional_var_files`:
+   ```hcl
+   optional_var_files = [
+     "${get_terragrunt_dir()}/overwrite.auto.tfvars",
+     "${get_repo_root()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/foundations.tfvars",
+     "${get_repo_root()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/platform.tfvars",
+     "${get_repo_root()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/applications.tfvars",
+     "${get_repo_root()}/environments/${get_env("TF_VAR_ENVIRONMENT", "dev")}/observability.tfvars",
+   ]
+   ```
+
+2. Each environment directory contains layer-specific overrides:
+   ```
+   environments/
+   ├── dev/     # Development — permissive, cost-optimized
+   ├── qa/      # QA — production-like, smaller scale
+   └── prd/     # Production — hardened, HA, full scale
+   ```
+
+3. Switch environments:
+   ```bash
+   export TF_VAR_ENVIRONMENT=prd
+   terragrunt run-all plan
+   ```
+
+## Dependency Graph
+
+Infrastructure deploys in strict layer order. Within each layer, Terragrunt resolves the unit DAG from `autoinclude` declarations.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         OBSERVABILITY                            │
+│   CloudWatch ─── Prometheus (← EKS)                            │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ depends on
+┌──────────────────────────────▼──────────────────────────────────┐
+│                         APPLICATION                              │
+│   ALB (← VPC, SGs) ─── ASG (← VPC, ALB)                        │
+│   S3 ─── EFS (← VPC)                                           │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ depends on
+┌──────────────────────────────▼──────────────────────────────────┐
+│                          PLATFORM                                │
+│   EKS (← VPC, IAM) ─── ECR                                     │
+│   RDS (← VPC) ─── ElastiCache (← VPC)                          │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ depends on
+┌──────────────────────────────▼──────────────────────────────────┐
+│                         FOUNDATION                               │
+│   VPC ─── IAM Roles                                             │
+│   Security Groups (← VPC)                                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Deployment Order
+
+```bash
+# Full deploy (Terragrunt resolves order automatically)
+cd stacks && terragrunt run-all apply
+
+# Or deploy layer-by-layer for more control
+cd stacks/foundation  && terragrunt run-all apply
+cd stacks/platform    && terragrunt run-all apply
+cd stacks/application && terragrunt run-all apply
+cd stacks/observability && terragrunt run-all apply
+```
+
+## ThothCTL Integration
+
+This scaffold is a [ThothCTL](https://thothforge.github.io/thothctl/) template. ThothCTL provides:
+
+- **Template scaffolding** — `thothctl init project` populates all `#{placeholder}#` values
+- **Security scanning** — `thothctl scan iac -t checkov -t trivy --enforcement hard`
+- **Infrastructure inventory** — `thothctl inventory iac --check-versions` generates CycloneDX SBOM
+- **Cost analysis** — `thothctl check iac -type cost-analysis --recursive`
+- **Drift detection** — `thothctl check iac -type drift --recursive`
+- **AI code review** — `thothctl ai-review analyze -d ./stacks -p ollama`
+- **Dashboard** — `thothctl dashboard launch` for unified visibility
+
+### MCP Server
+
+Run the ThothCTL MCP server for AI assistant integration:
+
+```bash
+thothctl mcp
+```
 
 ## Template Parameters
 
-| Parameter | Description | Example | Validation |
+Parameters defined in `.thothcf.toml` are replaced during scaffolding:
+
+| Parameter | Description | Default | Validation |
 |-----------|-------------|---------|------------|
-| `project_name` | Project identifier | `my-app` | `\b[a-zA-Z]+\b` |
-| `deployment_region` | AWS deployment region | `#{deployment_region}#` | `^[a-z]{2}-[a-z]{4,10}-\d$` |
-| `backend_bucket` | S3 bucket for state | `my-app-tfstate` | S3 naming rules |
-| `environment` | Target environment | `dev` | `(dev\|qa\|stg\|test\|prod)` |
-| `cloud_provider` | Cloud provider | `#{cloud_provider}#` | `(#{cloud_provider}#\|azure\|oci\|gcp)` |
-
-## Best Practices
-
-### Directory Structure
-- **Stacks**: Organize by service type (compute, network, storage)
-- **Modules**: Reusable Terraform modules
-- **Environments**: Use Terraform workspaces, not directories
-
-### Naming Conventions
-- **Resources**: `{project}-{environment}-{resource-type}`
-- **S3 Buckets**: `{project}-{purpose}` (e.g., `myapp-tfstate`)
-- **DynamoDB**: `{purpose}-{project}` (e.g., `#{backend_dynamodb}#`)
-
-### Security
-- **State Encryption**: Always enabled
-- **Access Control**: Use IAM roles and policies
-- **Secrets**: Never commit sensitive data
-- **Validation**: Use TFLint and pre-commit hooks
+| `project_name` | Project identifier | `test-wrapper` | `^[a-zA-Z0-9\-]+$` |
+| `deployment_region` | AWS deployment region | `us-east-2` | `^[a-z]{2}-[a-z]{4,10}-\d$` |
+| `backend_bucket` | S3 bucket for Terraform state | `test-wrapper-tfstate` | S3 naming rules |
+| `backend_region` | S3 backend region | `us-east-2` | `^[a-z]{2}-[a-z]{4,10}-\d$` |
+| `backend_dynamodb` | DynamoDB lock table | `db-terraform-lock` | `^[a-zA-Z0-9_.-]{3,255}$` |
+| `environment` | Initial environment | `dev` | `(dev\|qa\|stg\|test\|prod)` |
+| `cloud_provider` | Cloud provider | `aws` | `(aws\|azure\|oci\|gcp)` |
+| `deployment_profile` | AWS CLI profile | `default` | `^[a-zA-Z0-9_.-]{3,255}$` |
+| `backend_profile` | S3 state profile | `default` | `^[a-zA-Z0-9_.-]{3,255}$` |
+| `owner` | Team/role owner | `thothctl` | `^[a-zA-Z0-9\-]+$` |
+| `client` | Client/area | `thothctl` | `^[a-zA-Z0-9\-]+$` |
 
 ## Development Workflow
 
-1. **Create Feature Branch**
+### Pre-commit Hooks
+
+Install and activate:
+
 ```bash
-git checkout -b feature/new-infrastructure
+pip install pre-commit
+pre-commit install
 ```
 
-2. **Make Changes**
-```bash
-# Edit Terragrunt files
-terragrunt plan
-```
+Configured hooks (`.pre-commit-config.yaml`):
 
-3. **Validate**
+| Hook | Purpose |
+|------|---------|
+| `terragrunt-hclfmt` | Format all `.hcl` files |
+| `terraform-fmt` | Format `.tf` files |
+| `terraform-validate` | Validate Terraform syntax |
+| `tflint` | Lint Terraform code |
+| `shellcheck` | Lint shell scripts |
+
+### Workflow
+
 ```bash
-# Run pre-commit hooks
+# 1. Set target environment
+export TF_VAR_ENVIRONMENT=dev
+
+# 2. Create feature branch
+git checkout -b feat/add-redis-cluster
+
+# 3. Make changes (e.g., add unit to platform stack)
+#    Edit stacks/platform/terragrunt.stack.hcl
+
+# 4. Validate
 pre-commit run --all-files
+cd stacks/platform && terragrunt run-all validate
 
-# Run TFLint
-tflint --recursive
+# 5. Plan
+terragrunt run-all plan
+
+# 6. Apply in dev
+terragrunt run-all apply
+
+# 7. Security scan
+thothctl scan iac -t checkov -t trivy
+
+# 8. Commit and push
+git add -A && git commit -m "feat(platform): add Redis ElastiCache cluster"
+git push -u origin feat/add-redis-cluster
 ```
 
-4. **Test**
-```bash
-# Apply in dev environment
-terragrunt apply
+### Adding a New Unit
+
+1. Add the unit block to the appropriate `terragrunt.stack.hcl`
+2. Create the unit directory with a minimal `terragrunt.hcl` stub
+3. Add environment-specific overrides in `environments/<env>/<layer>.tfvars` if needed
+4. Run `terragrunt run-all plan` to verify the dependency graph
+
+## Remote State
+
+State is stored in S3 with DynamoDB locking (configured in `root.hcl`):
+
+```
+s3://#{backend_bucket}#/#{project_name}#/<relative-path>/terraform.tfstate
 ```
 
-5. **Submit PR**
-```bash
-git commit -m "feat: add new infrastructure component"
-git push origin feature/new-infrastructure
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**State Lock Errors**
-```bash
-# Force unlock (use carefully)
-terragrunt force-unlock LOCK_ID
-```
-
-**Backend Initialization**
-```bash
-# Reconfigure backend
-terragrunt init -reconfigure
-```
-
-**Module Updates**
-```bash
-# Update modules
-terragrunt init -upgrade
-```
-
-### Debugging
-```bash
-# Enable debug logging
-export TF_LOG=DEBUG
-export TERRAGRUNT_LOG_LEVEL=debug
-
-terragrunt plan
-```
-
-## Contributing
-
-1. Follow the established directory structure
-2. Use pre-commit hooks for code quality
-3. Update documentation for new features
-4. Test changes in dev environment first
-5. Follow semantic commit conventions
+Each unit gets an isolated state file keyed by its path relative to the repository root.
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## Amazon Q Custom Agent
-
-This project includes a custom Amazon Q agent configuration (`agent.json`) optimized for:
-- Terragrunt and Terraform operations
-- AWS service management
-- GitOps workflows
-- Infrastructure as Code best practices
-
-The agent provides pre-approved access to:
-- File operations for IaC files
-- AWS services (S3, DynamoDB, IAM, EC2, VPC)
-- Git operations for version control
-- Terragrunt/Terraform commands
-
-## Support
-
-For issues and questions:
-- Check the troubleshooting section
-- Review Terragrunt documentation
-- Open an issue in the project repository# Modified for testing
+This project is licensed under the [Apache License 2.0](LICENSE).

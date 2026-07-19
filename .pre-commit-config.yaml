@@ -1,11 +1,10 @@
-
 repos:
 - repo: https://github.com/gruntwork-io/pre-commit
-  rev: v0.1.30 # Get the latest from: https://github.com/gruntwork-io/pre-commit/releases
+  rev: v0.1.23
   hooks:
-    - id: terragrunt-hcl-fmt
-    - id: tofu-fmt
-    - id: tofu-validate
+    - id: terragrunt-hclfmt
+    - id: terraform-fmt
+    - id: terraform-validate
     - id: tflint
     - id: shellcheck
     - id: gofmt
